@@ -112,6 +112,8 @@ final class SshConfigHost
     }
 
     /**
+     * @param string $name
+     * @param string $config
      * @return void
      */
     public function __set(string $name, string $config)

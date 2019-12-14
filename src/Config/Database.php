@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace PHPSu\Config;
 
+use function array_merge;
+
+/** @deprecated  */
 final class Database
 {
     /** @var string */
@@ -44,7 +47,7 @@ final class Database
 
     public function addExcludes(array $excludes): Database
     {
-        $this->excludes = \array_merge($this->excludes, $excludes);
+        $this->excludes = array_merge($this->excludes, $excludes);
         return $this;
     }
 

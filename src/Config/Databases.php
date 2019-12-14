@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PHPSu\Config;
 
+use InvalidArgumentException;
+
 final class Databases
 {
     /** @var Database[] */
@@ -31,7 +33,7 @@ final class Databases
     public function get(string $name): Database
     {
         if (!isset($this->databases[$name])) {
-            throw new \Exception(sprintf('Database %s not found', $name));
+            throw new InvalidArgumentException(sprintf('Database %s not found', $name));
         }
         return $this->databases[$name];
     }

@@ -21,6 +21,7 @@ final class ConfigurationLoaderTest extends TestCase
 
     public function testGetConfigViaConfigurationLoader()
     {
+        // todo: update der configuration hier
         $configurationLoader = new ConfigurationLoader();
         $expectedConfig = new GlobalConfig();
         $expectedConfig->addFilesystem('var/storage', 'var/storage');
