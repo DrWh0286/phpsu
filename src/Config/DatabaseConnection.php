@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace PHPSu\Config;
@@ -47,7 +48,7 @@ final class DatabaseConnection implements ConnectionInterface
 
     public static function fromDatabaseObject(Database $databaseObject): DatabaseConnection
     {
-        $connection = new self;
+        $connection = new self();
         $connection->setIdentifier($databaseObject->getName());
         // the former DatabaseObject was only able to contain mysql-urls, therefore a special parsing is not necessary
         $information = new SqlDatabaseConfiguration($databaseObject->getUrl());

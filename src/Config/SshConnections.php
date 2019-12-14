@@ -6,6 +6,7 @@ namespace PHPSu\Config;
 
 use Exception;
 use PHPSu\Exceptions\ConfigurationException;
+
 use function count;
 
 final class SshConnections implements ConnectionsInterface

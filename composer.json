@@ -59,7 +59,7 @@
     "ext-json": "*"
   },
   "require-dev": {
-    "pluswerk/grumphp-config": "2.*",
+    "pluswerk/grumphp-config": "3.*",
     "bamarni/composer-bin-plugin": "^1.2"
   },
   "extra": {
