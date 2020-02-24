@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PHPSu\Process;
 
+use Generator;
 use PHPSu\Exceptions\CommandExecutionException;
 use PHPSu\Tools\EnvironmentUtility;
 
@@ -80,9 +81,9 @@ final class Process extends \Symfony\Component\Process\Process
 
     /**
      * @param int $flags A bit field of Process::ITER_* flags
-     * @return \Generator<string>
+     * @return Generator
      */
-    public function getIterator($flags = 0): \Generator
+    public function getIterator($flags = 0): Generator
     {
         return parent::getIterator($flags);
     }
