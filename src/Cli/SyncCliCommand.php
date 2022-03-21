@@ -27,6 +27,7 @@ final class SyncCliCommand extends AbstractCliCommand
             ->addOption('no-fs', null, InputOption::VALUE_NONE, 'Do not sync Filesystems.')
             ->addOption('no-db', null, InputOption::VALUE_NONE, 'Do not sync Databases.')
             ->addOption('from', null, InputOption::VALUE_OPTIONAL, 'Only show commands that would be run.', '')
+            ->addOption('tb-sync', null, InputOption::VALUE_OPTIONAL, 'Comma separated list with database tables to sync (ignores exclude!).', '')
             ->addArgument('source', InputArgument::REQUIRED, 'The Source AppInstance.')
             ->addArgument('destination', InputArgument::OPTIONAL, 'The Destination AppInstance.', 'local');
     }
@@ -39,6 +40,8 @@ final class SyncCliCommand extends AbstractCliCommand
         $source = $this->getArgument($input, 'source');
         /** @var string $destination */
         $destination = $this->getArgument($input, 'destination');
+        /** @var string $destination */
+        $tablesToSync = $this->getOption($input, 'tb-sync');
         /** @var string $currentHost */
         $currentHost = $this->getOption($input, 'from');
 
@@ -49,6 +52,7 @@ final class SyncCliCommand extends AbstractCliCommand
             ->setCurrentHost($currentHost)
             ->setDryRun((bool)$input->getOption('dry-run'))
             ->setAll((bool)$input->getOption('all'))
+            ->setTablesToSync($tablesToSync)
             ->setNoFiles((bool)$input->getOption('no-fs'))
             ->setNoDatabases((bool)$input->getOption('no-db'));
 

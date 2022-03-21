@@ -32,6 +32,8 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
     private $sshConfig;
     /** @var string[] */
     private $excludes = [];
+    /** @var string[] */
+    private $tablesToSync = [];
 
     /** @var Database */
     private $fromDatabase;
@@ -59,6 +61,7 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
      * @param string $fromInstanceName
      * @param string $toInstanceName
      * @param string $currentHost
+     * @param array<string> $tablesToSync
      * @param bool $all
      * @param int $verbosity
      * @return DatabaseCommand[]
@@ -69,6 +72,7 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
         string $toInstanceName,
         string $currentHost,
         bool $all,
+        array $tablesToSync,
         int $verbosity
     ): array {
         $fromInstance = $global->getAppInstance($fromInstanceName);
@@ -86,24 +90,25 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
             if ($toInstance->hasDatabase($databaseName)) {
                 $toDatabase = $toInstance->getDatabase($databaseName);
             }
-            $result[] = static::fromAppInstances($fromInstance, $toInstance, $fromDatabase, $toDatabase, $currentHost, $all, $verbosity, $compression);
+            $result[] = static::fromAppInstances($fromInstance, $toInstance, $fromDatabase, $toDatabase, $currentHost, $all, $tablesToSync, $verbosity, $compression);
         }
         foreach ($fromInstance->getDatabases() as $databaseName => $fromDatabase) {
             if ($toInstance->hasDatabase($databaseName)) {
                 $toDatabase = $toInstance->getDatabase($databaseName);
-                $result[] = static::fromAppInstances($fromInstance, $toInstance, $fromDatabase, $toDatabase, $currentHost, $all, $verbosity, $compression);
+                $result[] = static::fromAppInstances($fromInstance, $toInstance, $fromDatabase, $toDatabase, $currentHost, $all, $tablesToSync, $verbosity, $compression);
             }
         }
         return $result;
     }
 
-    public static function fromAppInstances(
+    private static function fromAppInstances(
         AppInstance $from,
         AppInstance $to,
         Database $fromDatabase,
         Database $toDatabase,
         string $currentHost,
         bool $all,
+        array $tablesToSync,
         int $verbosity,
         CompressionInterface $compression
     ): DatabaseCommand {
@@ -118,6 +123,7 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
         if (!$all) {
             $result->setExcludes(array_unique(array_merge($fromDatabase->getExcludes(), $toDatabase->getExcludes())));
         }
+        $result->setTablesToSync($tablesToSync);
         return $result;
     }
 
@@ -171,6 +177,24 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
     public function setExcludes(array $excludes): DatabaseCommand
     {
         $this->excludes = $excludes;
+        return $this;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getTablesToSync(): array
+    {
+        return $this->tablesToSync;
+    }
+
+    /**
+     * @param string[] $tablesToSync
+     * @return DatabaseCommand
+     */
+    public function setTablesToSync(array $tablesToSync): DatabaseCommand
+    {
+        $this->tablesToSync = $tablesToSync;
         return $this;
     }
 
@@ -274,7 +298,29 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
         $to = $this->getToDatabase()->getConnectionDetails();
         $tableInfo = false;
         $dbBuilder = ShellBuilder::new();
-        if ($this->getExcludes()) {
+
+        if ($this->getTablesToSync()) {
+            $sqlPart = $this->generateTablesToSyncSql($from->getDatabase(), $this->getTablesToSync());
+            $command = DockerCommandHelper::wrapCommand(
+                $this->getFromDatabase(),
+                $this->addArgumentsToShellCommand(
+                    ShellBuilder::command('mysql'),
+                    $from,
+                    true
+                )
+                    ->addShortOption('AN')
+                    ->addShortOption('e', sprintf('"%s"', $sqlPart), false),
+                false
+            );
+            $dbBuilder->addVariable(
+                'TBLIST',
+                $command,
+                true,
+                true,
+                true
+            );
+            $tableInfo = true;
+        } elseif ($this->getExcludes()) {
             $sqlPart = $this->generateSqlQuery($from->getDatabase(), $this->getExcludes());
             $command = DockerCommandHelper::wrapCommand(
                 $this->getFromDatabase(),
@@ -296,6 +342,7 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
             );
             $tableInfo = true;
         }
+
         $dumpCommand = ShellBuilder::command('mysqldump');
         $verbosity = StringHelper::optionStringForVerbosity($this->getVerbosity());
         if ($verbosity) {
@@ -437,6 +484,29 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
     }
 
     /**
+     * @param string[] $tablesToSync
+     * @return string
+     */
+    private function getTablesToSyncSqlPart(array $tablesToSync): string
+    {
+        $result = '';
+        $simpleExclude = [];
+        foreach ($tablesToSync as $exclude) {
+            $stringLength = strlen($exclude);
+            // can be replaced in php 8.0 with str_starts_with and str_end_with
+            if ($stringLength >= 3 && strncmp($exclude, '/', 1) === 0 && $exclude[$stringLength - 1] === '/') {
+                $result .= ' AND table_name NOT REGEXP \'' . substr($exclude, 1, $stringLength - 2) . '\'';
+            } else {
+                $simpleExclude[] = '\'' . $exclude . '\'';
+            }
+        }
+        if ($simpleExclude) {
+            $result .= ' AND table_name IN(' . implode(',', $simpleExclude) . ')';
+        }
+        return $result;
+    }
+
+    /**
      * @param string $database
      * @param string[] $excludes
      * @return string
@@ -444,6 +514,14 @@ final class DatabaseCommand implements CommandInterface, GroupedCommandInterface
     private function generateSqlQuery(string $database, array $excludes): string
     {
         $whereCondition = $this->getExcludeSqlPart($excludes);
+        return <<<SQL
+SET group_concat_max_len = 51200; SELECT GROUP_CONCAT(table_name separator ' ') FROM information_schema.tables WHERE table_schema='${database}'${whereCondition}
+SQL;
+    }
+
+    private function generateTablesToSyncSql(string $database, array $tablesToSync): string
+    {
+        $whereCondition = $this->getTablesToSyncSqlPart($tablesToSync);
         return <<<SQL
 SET group_concat_max_len = 51200; SELECT GROUP_CONCAT(table_name separator ' ') FROM information_schema.tables WHERE table_schema='${database}'${whereCondition}
 SQL;

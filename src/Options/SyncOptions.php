@@ -19,6 +19,8 @@ final class SyncOptions
     private $dryRun = false;
     /** @var bool */
     private $all = false;
+    /** @var string */
+    private $tablesToSync = '';
     /** @var bool */
     private $noFiles = false;
     /** @var bool */
@@ -81,6 +83,32 @@ final class SyncOptions
     public function setAll(bool $all): SyncOptions
     {
         $this->all = $all;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTablesToSync(): string
+    {
+        return $this->tablesToSync;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getTablesToSyncAsArray(): array
+    {
+        return explode(',', $this->tablesToSync);
+    }
+
+    /**
+     * @param string $tablesToSync
+     * @return SyncOptions
+     */
+    public function setTablesToSync(string $tablesToSync): SyncOptions
+    {
+        $this->tablesToSync = $tablesToSync;
         return $this;
     }
 

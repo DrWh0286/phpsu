@@ -104,7 +104,7 @@ final class CommandGenerator
             }
         }
         if (!$options->isNoDatabases()) {
-            $databaseCommands = DatabaseCommand::fromGlobal($this->globalConfig, $options->getSource(), $options->getDestination(), $options->getCurrentHost(), $options->isAll(), $this->verbosity);
+            $databaseCommands = DatabaseCommand::fromGlobal($this->globalConfig, $options->getSource(), $options->getDestination(), $options->getCurrentHost(), $options->isAll(), $options->getTablesToSyncAsArray(), $this->verbosity);
             foreach ($databaseCommands as $databaseCommand) {
                 $databaseCommand->setSshConfig($sshConfig);
                 $result[$databaseCommand->getName()] = (string)$databaseCommand->generate(ShellBuilder::new());
