@@ -99,7 +99,7 @@ final class SyncOptions
      */
     public function getTablesToSyncAsArray(): array
     {
-        return explode(',', $this->tablesToSync);
+        return array_map('trim', array_filter(explode(',', $this->tablesToSync)));
     }
 
     /**
